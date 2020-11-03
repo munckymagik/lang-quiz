@@ -99,6 +99,6 @@ fn show_banner() {
 }
 
 fn load_words() -> Vec<Word> {
-    let mut rdr = csv::Reader::from_path("data/pt-nouns.csv").expect("failed to load data file");
+    let mut rdr = csv::Reader::from_path("data/biglist.csv").expect("failed to load data file");
     rdr.deserialize().collect::<Result<Vec<_>, _>>().expect("failed to parse words")
 }
