@@ -7,7 +7,7 @@ use rand::prelude::*;
 use rand::seq::SliceRandom;
 use trivial_colours::{Colour, Reset};
 
-const TIMEOUT_SECS: u64 = 60;
+const TIMEOUT_SECS: u64 = 120;
 
 // a corresponding field in the CSV data's header record.
 #[derive(Debug, Deserialize)]
