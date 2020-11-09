@@ -12,9 +12,9 @@ const TIMEOUT_SECS: u64 = 60;
 // a corresponding field in the CSV data's header record.
 #[derive(Debug, Deserialize)]
 struct Word {
-    word: String,
-    english: String,
-    gender: Option<String>,
+    left: String,
+    right: String,
+    notes: Option<String>,
 }
 
 fn main() {
@@ -53,9 +53,9 @@ fn run(start_time: Instant, timeout: Duration, rng: &mut ThreadRng, words: &[Wor
 
         let swap = true;
         let (prompt, answer) = if swap {
-            (&words[i].english, &words[i].word)
+            (&words[i].right, &words[i].left)
         } else {
-            (&words[i].word, &words[i].english)
+            (&words[i].left, &words[i].right)
         };
 
         while answer != buffer.trim() {
@@ -99,6 +99,6 @@ fn show_banner() {
 }
 
 fn load_words() -> Vec<Word> {
-    let mut rdr = csv::Reader::from_path("data/biglist.csv").expect("failed to load data file");
+    let mut rdr = csv::Reader::from_path("data/pt-nouns.csv").expect("failed to load data file");
     rdr.deserialize().collect::<Result<Vec<_>, _>>().expect("failed to parse words")
 }
