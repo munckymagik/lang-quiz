@@ -20,9 +20,18 @@ struct Word {
 fn main() {
     show_banner();
 
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() != 2 {
+        println!("USAGE {} quiz_data_file.csv", args[0]);
+        return;
+    }
+
+    let file_path = &args[1];
+
     let start_time = Instant::now();
     let timeout = Duration::from_secs(TIMEOUT_SECS);
-    let words = load_words();
+    let words = load_words(file_path);
     let mut rng = rand::thread_rng();
 
     run(start_time, timeout, &mut rng, &words);
@@ -98,7 +107,7 @@ fn show_banner() {
              Reset);
 }
 
-fn load_words() -> Vec<Word> {
-    let mut rdr = csv::Reader::from_path("data/pt-nouns.csv").expect("failed to load data file");
+fn load_words(file_path: &str) -> Vec<Word> {
+    let mut rdr = csv::Reader::from_path(file_path).expect("failed to load data file");
     rdr.deserialize().collect::<Result<Vec<_>, _>>().expect("failed to parse words")
 }
