@@ -79,7 +79,8 @@ fn run(start_time: Instant, timeout: Duration, rng: &mut ThreadRng, words: &[Wor
             show_prompt(prompt,
                         time_remaining,
                         num_words,
-                        num_mistakes + attempts - 1);
+                        num_mistakes + attempts - 1,
+                        words[i].notes.as_deref());
 
             buffer.clear();
             io::stdin().read_line(&mut buffer).expect("Error reading input");
@@ -89,11 +90,15 @@ fn run(start_time: Instant, timeout: Duration, rng: &mut ThreadRng, words: &[Wor
     }
 }
 
-fn show_prompt(word: &str, time_remaining: Duration, num_words: i32, num_mistakes: i32) {
+fn show_prompt(word: &str, time_remaining: Duration, num_words: i32, num_mistakes: i32, notes: Option<&str>) {
     if num_mistakes > 0 { print!("{}", Colour::Red) };
     print!("{}{}/{} ", num_mistakes, Reset, num_words);
     print!("{}{}s{} ", Colour::Magenta, time_remaining.as_secs(), Reset);
-    print!("{}{}{}", Colour::Cyan, word, Reset);
+    print!("{}{}", Colour::Cyan, word);
+    if let Some(notes) = notes {
+        print!(" ({})", notes);
+    }
+    print!("{}", Reset);
     println!();
     print!("> ");
     io::stdout().flush().expect("Error flushing stdout");
