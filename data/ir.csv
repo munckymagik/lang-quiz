@@ -1,9 +1,9 @@
 left,right,notes
-eu vou,I go,"ir, presente"
-você vai,you go,"ir, presente"
-nós vamos,we go,"ir, presente"
-vocês vão,we all go,"ir, presente"
-eu fui,I went,"ir, pretérito perfeito"
-você foi,you went,"ir, pretérito perfeito"
-nós fomos,we went,"ir, pretérito perfeito"
-vocês foram,you all went,"ir, pretérito perfeito"
+eu vou,I go,
+você vai,you go,
+nós vamos,we go,
+vocês vão,you go,"plural"
+eu fui,I went,
+você foi,you went,
+nós fomos,we went,
+vocês foram,you went,"plural"
