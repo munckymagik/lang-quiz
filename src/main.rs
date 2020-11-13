@@ -69,9 +69,12 @@ fn run(start_time: Instant, timeout: Duration, rng: &mut ThreadRng, words: &[Wor
 
         while answer != buffer.trim() {
             attempts += 1;
-            if attempts > 2 {
-                print!("{}Answer:{} {}\n", Colour::Red, Reset, answer);
-                break
+            if attempts > 1 {
+                print!("{}Try again:{} {}\n", Colour::Red, Reset, answer);
+
+                if attempts > 5 {
+                    break;
+                }
             }
             let time_remaining = timeout.checked_sub(start_time.elapsed())
                                         .unwrap_or_default();
@@ -87,6 +90,8 @@ fn run(start_time: Instant, timeout: Duration, rng: &mut ThreadRng, words: &[Wor
         }
 
         num_mistakes += attempts - 1;
+
+        println!();
     }
 }
 
