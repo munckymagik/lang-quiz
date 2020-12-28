@@ -5,9 +5,16 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
+use structopt::StructOpt;
 use trivial_colours::{Colour, Reset};
 
 const TIMEOUT_SECS: u64 = 120;
+
+#[derive(Debug, StructOpt)]
+struct Opt {
+    /// Specify the CSV quiz data to load
+    quiz_data_file: String,
+}
 
 // a corresponding field in the CSV data's header record.
 #[derive(Debug, Deserialize)]
@@ -18,20 +25,12 @@ struct Word {
 }
 
 fn main() {
+    let opt = Opt::from_args();
     show_banner();
-
-    let args: Vec<String> = std::env::args().collect();
-
-    if args.len() != 2 {
-        println!("USAGE {} quiz_data_file.csv", args[0]);
-        return;
-    }
-
-    let file_path = &args[1];
 
     let start_time = Instant::now();
     let timeout = Duration::from_secs(TIMEOUT_SECS);
-    let words = load_words(file_path);
+    let words = load_words(&opt.quiz_data_file);
     let mut rng = rand::thread_rng();
 
     run(start_time, timeout, &mut rng, &words);
