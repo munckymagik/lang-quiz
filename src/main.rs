@@ -22,7 +22,6 @@ struct Opt {
     time_limit: u64,
 }
 
-// a corresponding field in the CSV data's header record.
 #[derive(Debug, Deserialize)]
 struct Word {
     left: String,
