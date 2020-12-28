@@ -14,11 +14,11 @@ struct Opt {
 
     /// Flip the language to use as the prompt
     #[structopt(short, long)]
-    swap: bool,
+    flip: bool,
 
     /// Enable shuffling of the questions
-    #[structopt(long)]
-    enable_shuffle: bool,
+    #[structopt(short, long)]
+    shuffle: bool,
 
     /// Set the time limit for the quiz in seconds
     #[structopt(short, long, default_value = "120")]
@@ -39,16 +39,16 @@ fn main() {
     let timeout = Duration::from_secs(opt.time_limit);
     let words = load_words(&opt.quiz_data_file);
 
-    run(&words, timeout, opt.swap, opt.enable_shuffle);
+    run(&words, timeout, opt.flip, opt.shuffle);
 }
 
-fn run(words: &[Word], timeout: Duration, swap: bool, enable_shuffle: bool) {
+fn run(words: &[Word], timeout: Duration, flip: bool, shuffle: bool) {
     let start_time = Instant::now();
     let mut num_mistakes: i32 = 0;
     let mut num_words: i32 = 0;
     let mut word_order: Vec<_> = (0..words.len()).collect();
 
-    if enable_shuffle {
+    if shuffle {
         let mut rng = rand::thread_rng();
         word_order.shuffle(&mut rng);
     }
@@ -70,7 +70,7 @@ fn run(words: &[Word], timeout: Duration, swap: bool, enable_shuffle: bool) {
         let mut attempts: i32 = 0;
         num_words += 1;
 
-        let (prompt, answer) = if swap {
+        let (prompt, answer) = if flip {
             (&words[i].left, &words[i].right)
         } else {
             (&words[i].right, &words[i].left)
