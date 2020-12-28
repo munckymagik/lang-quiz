@@ -8,12 +8,18 @@ use rand::seq::SliceRandom;
 use structopt::StructOpt;
 use trivial_colours::{Colour, Reset};
 
-const TIMEOUT_SECS: u64 = 120;
-
 #[derive(Debug, StructOpt)]
 struct Opt {
     /// Specify the CSV quiz data to load
     quiz_data_file: String,
+
+    /// Flip the language to use as the prompt
+    #[structopt(short, long)]
+    swap: bool,
+
+    /// Set the time limit for the quiz in seconds
+    #[structopt(short, long, default_value = "120")]
+    time_limit: u64,
 }
 
 // a corresponding field in the CSV data's header record.
@@ -28,15 +34,15 @@ fn main() {
     let opt = Opt::from_args();
     show_banner();
 
-    let start_time = Instant::now();
-    let timeout = Duration::from_secs(TIMEOUT_SECS);
+    let timeout = Duration::from_secs(opt.time_limit);
     let words = load_words(&opt.quiz_data_file);
     let mut rng = rand::thread_rng();
 
-    run(start_time, timeout, &mut rng, &words);
+    run(&words, &mut rng, timeout, opt.swap);
 }
 
-fn run(start_time: Instant, timeout: Duration, rng: &mut ThreadRng, words: &[Word]) {
+fn run(words: &[Word], rng: &mut ThreadRng, timeout: Duration, swap: bool) {
+    let start_time = Instant::now();
     let mut num_mistakes: i32 = 0;
     let mut num_words: i32 = 0;
     let mut word_order: Vec<_> = (0..words.len()).collect();
@@ -59,11 +65,10 @@ fn run(start_time: Instant, timeout: Duration, rng: &mut ThreadRng, words: &[Wor
         let mut attempts: i32 = 0;
         num_words += 1;
 
-        let swap = true;
         let (prompt, answer) = if swap {
-            (&words[i].right, &words[i].left)
-        } else {
             (&words[i].left, &words[i].right)
+        } else {
+            (&words[i].right, &words[i].left)
         };
 
         while answer != buffer.trim() {
