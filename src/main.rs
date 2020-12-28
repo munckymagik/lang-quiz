@@ -3,7 +3,6 @@ use std::io::prelude::*;
 use std::time::{Duration, Instant};
 
 use serde::Deserialize;
-use rand::prelude::*;
 use rand::seq::SliceRandom;
 use structopt::StructOpt;
 use trivial_colours::{Colour, Reset};
@@ -16,6 +15,10 @@ struct Opt {
     /// Flip the language to use as the prompt
     #[structopt(short, long)]
     swap: bool,
+
+    /// Enable shuffling of the questions
+    #[structopt(long)]
+    enable_shuffle: bool,
 
     /// Set the time limit for the quiz in seconds
     #[structopt(short, long, default_value = "120")]
@@ -35,17 +38,20 @@ fn main() {
 
     let timeout = Duration::from_secs(opt.time_limit);
     let words = load_words(&opt.quiz_data_file);
-    let mut rng = rand::thread_rng();
 
-    run(&words, &mut rng, timeout, opt.swap);
+    run(&words, timeout, opt.swap, opt.enable_shuffle);
 }
 
-fn run(words: &[Word], rng: &mut ThreadRng, timeout: Duration, swap: bool) {
+fn run(words: &[Word], timeout: Duration, swap: bool, enable_shuffle: bool) {
     let start_time = Instant::now();
     let mut num_mistakes: i32 = 0;
     let mut num_words: i32 = 0;
     let mut word_order: Vec<_> = (0..words.len()).collect();
-    word_order.shuffle(rng);
+
+    if enable_shuffle {
+        let mut rng = rand::thread_rng();
+        word_order.shuffle(&mut rng);
+    }
 
     for i in word_order {
         if start_time.elapsed() >= timeout {
