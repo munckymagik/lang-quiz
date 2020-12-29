@@ -1,11 +1,8 @@
-use std::io;
-use std::io::prelude::*;
 use std::time::{Duration, Instant};
 
-use serde::Deserialize;
 use rand::seq::SliceRandom;
+use serde::Deserialize;
 use structopt::StructOpt;
-use trivial_colours::{Colour, Reset};
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -34,99 +31,188 @@ struct Word {
 
 fn main() {
     let opt = Opt::from_args();
-    show_banner();
+    ui::show_banner();
 
     let timeout = Duration::from_secs(opt.time_limit);
     let words = load_words(&opt.quiz_data_file);
 
-    run(&words, timeout, opt.flip, opt.shuffle);
+    let game = Game::new(&words, timeout, opt.flip, opt.shuffle);
+
+    game.run();
 }
 
-fn run(words: &[Word], timeout: Duration, flip: bool, shuffle: bool) {
-    let start_time = Instant::now();
-    let mut num_mistakes: i32 = 0;
-    let mut num_words: i32 = 0;
-    let mut word_order: Vec<_> = (0..words.len()).collect();
+struct Game<'a> {
+    words: &'a [Word],
+    timeout: Duration,
+    flip: bool,
+    shuffle: bool,
+    start_time: Instant,
+}
 
-    if shuffle {
-        let mut rng = rand::thread_rng();
-        word_order.shuffle(&mut rng);
+impl<'a> Game<'a> {
+    fn new(words: &'a [Word], timeout: Duration, flip: bool, shuffle: bool) -> Self {
+        Game {
+            words,
+            timeout,
+            flip,
+            shuffle,
+            start_time: Instant::now(),
+        }
     }
 
-    for i in word_order {
-        if start_time.elapsed() >= timeout {
-            println!("Time's up!");
-            println!("{}{}{} words, {}{}{} mistakes",
-                     Colour::Green,
-                     num_words,
-                     Reset,
-                     Colour::Red,
-                     num_mistakes,
-                     Reset);
-            break;
-        }
+    fn run(self) {
+        let mut num_mistakes: i32 = 0;
+        let mut num_words: i32 = 0;
+        let word_order = self.word_order();
 
-        let mut buffer = String::new();
-        let mut attempts: i32 = 0;
-        num_words += 1;
-
-        let (prompt, answer) = if flip {
-            (&words[i].left, &words[i].right)
-        } else {
-            (&words[i].right, &words[i].left)
-        };
-
-        while answer != buffer.trim() {
-            attempts += 1;
-            if attempts > 1 {
-                print!("{}Try again:{} {}\n", Colour::Red, Reset, answer);
-
-                if attempts > 5 {
-                    break;
-                }
+        for i in word_order {
+            if self.is_game_over() {
+                ui::on_game_over(num_words, num_mistakes);
+                break;
             }
-            let time_remaining = timeout.checked_sub(start_time.elapsed())
-                                        .unwrap_or_default();
 
-            show_prompt(prompt,
-                        time_remaining,
-                        num_words,
-                        num_mistakes + attempts - 1,
-                        words[i].notes.as_deref());
+            let mut buffer = String::new();
+            let mut attempts: i32 = 0;
+            num_words += 1;
 
-            buffer.clear();
-            io::stdin().read_line(&mut buffer).expect("Error reading input");
+            let (prompt, answer, notes) = self.get_question(i);
+
+            while answer != buffer {
+                attempts += 1;
+                if attempts > 1 {
+                    ui::on_wrong_answer(answer);
+
+                    if attempts > 5 {
+                        break;
+                    }
+                }
+
+                ui::on_start_question(
+                    prompt,
+                    self.time_remaining(),
+                    num_words,
+                    num_mistakes + attempts - 1,
+                    notes,
+                );
+
+                buffer = ui::read_input();
+            }
+
+            num_mistakes += attempts - 1;
+
+            ui::on_end_question();
+        }
+    }
+
+    fn get_question(&self, index: usize) -> (&str, &str, Option<&str>) {
+        if self.flip {
+            (
+                &self.words[index].left,
+                &self.words[index].right,
+                self.words[index].notes.as_deref(),
+            )
+        } else {
+            (
+                &self.words[index].right,
+                &self.words[index].left,
+                self.words[index].notes.as_deref(),
+            )
+        }
+    }
+
+    fn time_remaining(&self) -> Duration {
+        self.timeout
+            .checked_sub(self.start_time.elapsed())
+            .unwrap_or_default()
+    }
+
+    fn is_game_over(&self) -> bool {
+        self.start_time.elapsed() >= self.timeout
+    }
+
+    fn word_order(&self) -> Vec<usize> {
+        let mut word_order: Vec<_> = (0..self.words.len()).collect();
+
+        if self.shuffle {
+            let mut rng = rand::thread_rng();
+            word_order.shuffle(&mut rng);
         }
 
-        num_mistakes += attempts - 1;
+        word_order
+    }
+}
 
+mod ui {
+    use std::io;
+    use std::io::prelude::*;
+    use std::time::Duration;
+    use trivial_colours::{Colour, Reset};
+
+    pub fn read_input() -> String {
+        let mut buffer = String::new();
+        io::stdin()
+            .read_line(&mut buffer)
+            .expect("Error reading input");
+        buffer.trim().to_owned()
+    }
+
+    pub fn on_start_question(
+        word: &str,
+        time_remaining: Duration,
+        num_words: i32,
+        num_mistakes: i32,
+        notes: Option<&str>,
+    ) {
+        if num_mistakes > 0 {
+            print!("{}", Colour::Red)
+        };
+        print!("{}{}/{} ", num_mistakes, Reset, num_words);
+        print!("{}{}s{} ", Colour::Magenta, time_remaining.as_secs(), Reset);
+        print!("{}{}", Colour::Cyan, word);
+        if let Some(notes) = notes {
+            print!(" ({})", notes);
+        }
+        print!("{}", Reset);
+        println!();
+        print!("> ");
+        io::stdout().flush().expect("Error flushing stdout");
+    }
+
+    pub fn on_game_over(num_words: i32, num_mistakes: i32) {
+        println!("Time's up!");
+        println!(
+            "{}{}{} words, {}{}{} mistakes",
+            Colour::Green,
+            num_words,
+            Reset,
+            Colour::Red,
+            num_mistakes,
+            Reset
+        );
+    }
+
+    pub fn on_wrong_answer(answer: &str) {
+        print!("{}Try again:{} {}\n", Colour::Red, Reset, answer);
+    }
+
+    pub fn on_end_question() {
         println!();
     }
-}
 
-fn show_prompt(word: &str, time_remaining: Duration, num_words: i32, num_mistakes: i32, notes: Option<&str>) {
-    if num_mistakes > 0 { print!("{}", Colour::Red) };
-    print!("{}{}/{} ", num_mistakes, Reset, num_words);
-    print!("{}{}s{} ", Colour::Magenta, time_remaining.as_secs(), Reset);
-    print!("{}{}", Colour::Cyan, word);
-    if let Some(notes) = notes {
-        print!(" ({})", notes);
+    pub fn show_banner() {
+        println!(
+            "{}{} v{}{}",
+            Colour::Blue,
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+            Reset
+        );
     }
-    print!("{}", Reset);
-    println!();
-    print!("> ");
-    io::stdout().flush().expect("Error flushing stdout");
-}
-
-fn show_banner() {
-    println!("{}{} v{}{}",
-             Colour::Blue,
-             env!("CARGO_PKG_NAME"),
-             env!("CARGO_PKG_VERSION"),
-             Reset);
 }
 
 fn load_words(file_path: &str) -> Vec<Word> {
     let mut rdr = csv::Reader::from_path(file_path).expect("failed to load data file");
-    rdr.deserialize().collect::<Result<Vec<_>, _>>().expect("failed to parse words")
+    rdr.deserialize()
+        .collect::<Result<Vec<_>, _>>()
+        .expect("failed to parse words")
 }
