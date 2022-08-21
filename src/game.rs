@@ -1,5 +1,4 @@
 use rand::seq::SliceRandom;
-use std::time::Instant;
 use std::time::Duration;
 
 use crate::domain;
@@ -10,7 +9,6 @@ pub(crate) struct Game<'a> {
     timeout: Duration,
     flip: bool,
     shuffle: bool,
-    start_time: Instant,
 
     ui: &'a dyn ui::Ui,
 }
@@ -22,25 +20,23 @@ impl<'a> Game<'a> {
             timeout,
             flip,
             shuffle,
-            start_time: Instant::now(),
             ui,
         }
     }
 
     pub(crate) fn run(&self) {
-        let mut num_mistakes: i32 = 0;
-        let mut num_words: i32 = 0;
+        let mut state = domain::GameState::default();
         let word_order = self.word_order();
 
         for i in word_order {
-            if self.is_game_over() {
-                self.ui.game_over(num_words, num_mistakes);
+            if self.is_game_over(&state) {
+                self.ui.game_over(state.num_words, state.num_mistakes);
                 break;
             }
 
             let mut buffer = String::new();
             let mut attempts: i32 = 0;
-            num_words += 1;
+            state.num_words += 1;
 
             let question = self.get_question(i);
 
@@ -56,22 +52,22 @@ impl<'a> Game<'a> {
 
                 self.ui.start_question(
                     question.prompt,
-                    self.time_remaining(),
-                    num_words,
-                    num_mistakes + attempts - 1,
+                    self.time_remaining(&state),
+                    state.num_words,
+                    state.num_mistakes + attempts - 1,
                     question.notes,
                 );
 
                 buffer = self.ui.read_input();
             }
 
-            num_mistakes += attempts - 1;
+            state.num_mistakes += attempts - 1;
 
             self.ui.end_question();
         }
     }
 
-    pub(crate) fn get_question(&self, index: usize) -> domain::Question {
+    fn get_question(&self, index: usize) -> domain::Question {
         if self.flip {
             domain::Question{
                 prompt: &self.words[index].left,
@@ -87,17 +83,17 @@ impl<'a> Game<'a> {
         }
     }
 
-    pub(crate) fn time_remaining(&self) -> Duration {
+    fn time_remaining(&self, state: &domain::GameState) -> Duration {
         self.timeout
-            .checked_sub(self.start_time.elapsed())
+            .checked_sub(state.start_time.elapsed())
             .unwrap_or_default()
     }
 
-    pub(crate) fn is_game_over(&self) -> bool {
-        self.start_time.elapsed() >= self.timeout
+    fn is_game_over(&self, state: &domain::GameState) -> bool {
+        state.start_time.elapsed() >= self.timeout
     }
 
-    pub(crate) fn word_order(&self) -> Vec<usize> {
+    fn word_order(&self) -> Vec<usize> {
         let mut word_order: Vec<_> = (0..self.words.len()).collect();
 
         if self.shuffle {
