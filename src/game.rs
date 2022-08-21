@@ -42,12 +42,12 @@ impl<'a> Game<'a> {
             let mut attempts: i32 = 0;
             num_words += 1;
 
-            let (prompt, answer, notes) = self.get_question(i);
+            let question = self.get_question(i);
 
-            while answer != buffer {
+            while question.answer != buffer {
                 attempts += 1;
                 if attempts > 1 {
-                    self.ui.wrong_answer(answer);
+                    self.ui.wrong_answer(question.answer);
 
                     if attempts > 5 {
                         break;
@@ -55,11 +55,11 @@ impl<'a> Game<'a> {
                 }
 
                 self.ui.start_question(
-                    prompt,
+                    question.prompt,
                     self.time_remaining(),
                     num_words,
                     num_mistakes + attempts - 1,
-                    notes,
+                    question.notes,
                 );
 
                 buffer = self.ui.read_input();
@@ -71,19 +71,19 @@ impl<'a> Game<'a> {
         }
     }
 
-    pub(crate) fn get_question(&self, index: usize) -> (&str, &str, Option<&str>) {
+    pub(crate) fn get_question(&self, index: usize) -> domain::Question {
         if self.flip {
-            (
-                &self.words[index].left,
-                &self.words[index].right,
-                self.words[index].notes.as_deref(),
-            )
+            domain::Question{
+                prompt: &self.words[index].left,
+                answer: &self.words[index].right,
+                notes: self.words[index].notes.as_deref(),
+            }
         } else {
-            (
-                &self.words[index].right,
-                &self.words[index].left,
-                self.words[index].notes.as_deref(),
-            )
+            domain::Question{
+                prompt: &self.words[index].right,
+                answer: &self.words[index].left,
+                notes: self.words[index].notes.as_deref(),
+            }
         }
     }
 
