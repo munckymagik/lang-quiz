@@ -5,6 +5,8 @@ mod domain;
 mod game;
 mod ui;
 
+use ui::Ui;
+
 #[derive(Debug, StructOpt)]
 struct Opt {
     /// Specify the CSV quiz data to load
@@ -25,12 +27,13 @@ struct Opt {
 
 fn main() {
     let opt = Opt::from_args();
-    ui::show_banner();
+    let ui = ui::TerminalUi{};
+    ui.show_banner();
 
     let timeout = Duration::from_secs(opt.time_limit);
     let words = domain::load_words(&opt.quiz_data_file);
 
-    let game = game::Game::new(&words, timeout, opt.flip, opt.shuffle);
+    let game = game::Game::new(&words, timeout, opt.flip, opt.shuffle, &ui);
 
     game.run();
 }

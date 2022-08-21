@@ -6,32 +6,35 @@ use crate::domain;
 use crate::ui;
 
 pub(crate) struct Game<'a> {
-    pub(crate) words: &'a [domain::Word],
-    pub(crate) timeout: Duration,
-    pub(crate) flip: bool,
-    pub(crate) shuffle: bool,
-    pub(crate) start_time: Instant,
+    words: &'a [domain::Word],
+    timeout: Duration,
+    flip: bool,
+    shuffle: bool,
+    start_time: Instant,
+
+    ui: &'a dyn ui::Ui,
 }
 
 impl<'a> Game<'a> {
-    pub(crate) fn new(words: &'a [domain::Word], timeout: Duration, flip: bool, shuffle: bool) -> Self {
+    pub(crate) fn new(words: &'a [domain::Word], timeout: Duration, flip: bool, shuffle: bool, ui: &'a dyn ui::Ui) -> Self {
         Game {
             words,
             timeout,
             flip,
             shuffle,
             start_time: Instant::now(),
+            ui,
         }
     }
 
-    pub(crate) fn run(self) {
+    pub(crate) fn run(&self) {
         let mut num_mistakes: i32 = 0;
         let mut num_words: i32 = 0;
         let word_order = self.word_order();
 
         for i in word_order {
             if self.is_game_over() {
-                ui::on_game_over(num_words, num_mistakes);
+                self.ui.game_over(num_words, num_mistakes);
                 break;
             }
 
@@ -44,14 +47,14 @@ impl<'a> Game<'a> {
             while answer != buffer {
                 attempts += 1;
                 if attempts > 1 {
-                    ui::on_wrong_answer(answer);
+                    self.ui.wrong_answer(answer);
 
                     if attempts > 5 {
                         break;
                     }
                 }
 
-                ui::on_start_question(
+                self.ui.start_question(
                     prompt,
                     self.time_remaining(),
                     num_words,
@@ -59,12 +62,12 @@ impl<'a> Game<'a> {
                     notes,
                 );
 
-                buffer = ui::read_input();
+                buffer = self.ui.read_input();
             }
 
             num_mistakes += attempts - 1;
 
-            ui::on_end_question();
+            self.ui.end_question();
         }
     }
 
